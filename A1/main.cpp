@@ -3,72 +3,91 @@
 int main()
 {
     // Your code here.
-    const std::size_t imageWidth{ 600 };
-    const std::size_t imageHeight{ 600 };
+    atlas::math::Ray<atlas::math::Vector> ray{ {0,0,0},{0,0,-1} };
+    constexpr Sphere object{ {0,0,0},30,{1,0,0} };
+    Sphere spheres[6];
+    spheres[0] = { {-150,100,30},30,{1,0,0} };
+    spheres[1] = { {-100,120,30},40,{0,1,0} };
+    spheres[2] = { {-50,80,60},50,{0,0,1} };
+    spheres[3] = { {0,90,190},60,{1,1,0} };
+    spheres[4] = { {50,100,120},70,{1,0,1} };
+    spheres[5] = { {100,50,150},80,{0,1,1} };
+    Plane planes[2];
+    planes[0] = { { 0,0,0 }, { 0,-1,-1 }, { 0.75,0.5,0.25 } };
+    planes[1] = { {0,0,0},{1,0,1},{0.25,0.5,0.75} };
 
-    Ray ray;
-    ray.d = { 0, 0, -1 };
-    Sphere s1;
-    s1.init({ 125, 0, 0 }, 90.0f);
-    Sphere s2;
-    s2.init({ 75, 10, 0 }, 80.0f);
-    Sphere s3;
-    s3.init({ 25, 20, 0 }, 70.0f);
-    Sphere s4;
-    s4.init({ -25, 30, 0 }, 60.0f);
-    Sphere s5;
-    s5.init({ -75, 40, 0 }, 50.0f);
-    Sphere s6;
-    s6.init({ -125, 50, 0 }, 40.0f);
-    //s.centre = { 0, 0, 0 };
-    //s.radius = 120.0f;
+    std::vector<Colour> image(image_width * image_height);
+    ShadeRec trace_data{};
 
-    std::vector<Colour> image(imageWidth * imageHeight);
-    //Colour pixel;
-    /*
-    for (std::size_t y{ 0 }; y < imageHeight; ++y)
+    for (std::size_t y{ 0 }; y < image_height; y++)
     {
-        for (std::size_t x{ 0 }; x < imageWidth; ++x)
+        for (std::size_t x{ 0 }; x < image_width; x++)
         {
-            // Compute origin of ray.
-            float originX = (x - 0.5f * (imageWidth - 1.0f));
-            float originY = (y - 0.5f * (imageHeight - 1.0f));
+            //ray.o = { x + 0.5f, y + 0.5f, 0 };
+            float originX = (x - 0.5f * (image_width - 1.0f));
+            float originY = (y - 0.5f * (image_height - 1.0f));
 
             ray.o = { originX, originY, 100.0f };
 
-            pixel = intersectRayWithSphere(s1, ray, { 0,1,0 });
+            float cloest_hit = std::numeric_limits<float>::infinity();
+            // did I hit
+            
+            for (int i = 0; i < 6; i++)
+            {
+                if (!spheres[i].hit(ray, trace_data))
+                {
+                    if (cloest_hit < std::numeric_limits<float>::infinity())
+                        continue;
+                    trace_data.cloest = background;
+                }
+                else
+                {
+                    if (trace_data.t < cloest_hit)
+                    {
+
+                        cloest_hit = trace_data.t;
+                        trace_data.cloest = trace_data.colour;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                    
+                    //break;
+                }
+           
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                if (planes[i].hit(ray, trace_data))
+                {
+                    if (trace_data.t < cloest_hit)
+                    {
+                        cloest_hit = trace_data.t;
+                        trace_data.cloest = trace_data.colour;
+                        
+                    }
+
+                }
+
+            }
 
 
-            image[x + y * imageHeight] = pixel;
+            /*if (trace_data.colour == background)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    planes[i].hit(ray, trace_data);
+                }
+            }*/
+
+
+            image[x + y * image_height] = trace_data.cloest;
         }
     }
 
-    for (std::size_t y{ 0 }; y < imageHeight; ++y)
-    {
-        for (std::size_t x{ 0 }; x < imageWidth; ++x)
-        {
-            // Compute origin of ray.
-            float originX = (x - 0.5f * (imageWidth - 1.0f));
-            float originY = (y - 0.5f * (imageHeight - 1.0f));
-
-            ray.o = { originX, originY, 100.0f };
-            if (image[x + y * imageHeight] != black)
-                continue;
-            pixel = intersectRayWithSphere(s2, ray, { 1,0,0 });
-
-
-            image[x + y * imageHeight] = pixel;
-        }
-    }
-    */
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s1, { 1,0,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s2, { 0,1,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s3, { 0,0,1 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s4, { 1,1,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s5, { 1,0,1 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s6, { 0,1,1 });
-
-    saveToBMP("sphere.bmp", imageWidth, imageHeight, image);
+    saveToBMP("Finalscene.bmp", image_width, image_height, image);
     
 }
 

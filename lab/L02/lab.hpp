@@ -60,7 +60,7 @@ public:
 
 private:
 	atlas::math::Point center_;
-		float radius_, radius_squr_;
+	float radius_, radius_squr_;
 	Colour colour_;
 	
 };
