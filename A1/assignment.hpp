@@ -119,7 +119,6 @@ public:
 
     bool hit(atlas::math::Ray<atlas::math::Vector> const& ray, ShadeRec& trace_data) const
     {
-        //auto t = (point_ - ray.o) * normal_ / (ray.d * normal_);
         auto t = glm::dot((point_ - ray.o), normal_) / glm::dot(ray.d, normal_);
 
         if (t >= 0.0f)
@@ -209,6 +208,104 @@ private:
     Colour colour_;
 };
 
+Colour objCasesDealing(atlas::math::Ray<atlas::math::Vector>& ray, ShadeRec& trace_data, Sphere spheres[], Plane planes[], Triangle triangles[])
+{
+    float cloest_t = -1.0f;
+    Colour cloest_colour = background;
+    for (int i = 0; i < num_sphere; i++)
+    {
+        if (!spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            trace_data.colour = background;
+
+        }
+        else if (!spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            continue;
+        }
+        else if (spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            cloest_t = trace_data.t;
+            cloest_colour = trace_data.colour;
+        }
+        else if (spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            if (trace_data.t < cloest_t)
+            {
+                cloest_t = trace_data.t;
+                cloest_colour = trace_data.colour;
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+    for (int i = 0; i < num_plane; i++)
+    {
+        if (!planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            trace_data.colour = background;
+
+        }
+        else if (!planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            continue;
+        }
+        else if (planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            cloest_t = trace_data.t;
+            cloest_colour = trace_data.colour;
+        }
+        else if (planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            if (trace_data.t < cloest_t)
+            {
+                cloest_t = trace_data.t;
+                cloest_colour = trace_data.colour;
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+
+    for (int i = 0; i < num_triangle; i++)
+    {
+        if (!triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            trace_data.colour = background;
+
+        }
+        else if (!triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            continue;
+        }
+        else if (triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
+        {
+            cloest_t = trace_data.t;
+            cloest_colour = trace_data.colour;
+        }
+        else if (triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
+        {
+            if (trace_data.t < cloest_t)
+            {
+                cloest_t = trace_data.t;
+                cloest_colour = trace_data.colour;
+            }
+            else
+            {
+                continue;
+            }
+        }
+    }
+
+    return cloest_colour;
+}
+
 void sceneGenerator(atlas::math::Ray<atlas::math::Vector>& ray, ShadeRec& trace_data, std::vector<Colour>& image, Sphere spheres[], Plane planes[], Triangle triangles[])
 {
     
@@ -218,108 +315,12 @@ void sceneGenerator(atlas::math::Ray<atlas::math::Vector>& ray, ShadeRec& trace_
     {
         for (std::size_t x{ 0 }; x < image_width; x++)
         {
-            //ray.o = { x + 0.5f, y + 0.5f, 0 };
             float originX = (x - 0.5f * (image_width - 1.0f));
             float originY = (y - 0.5f * (image_height - 1.0f));
 
+            ray.o = { originX, originY, 100.0f };           
 
-            ray.o = { originX, originY, 100.0f };
-            float cloest_t = -1.0f;
-            Colour cloest_colour = background;
-            
-
-            for (int i = 0; i < num_sphere; i++)
-            {
-                if (!spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    trace_data.colour = background;
-
-                }
-                else if (!spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    continue;
-                }
-                else if (spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    cloest_t = trace_data.t;
-                    cloest_colour = trace_data.colour;
-                }
-                else if (spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    if (trace_data.t < cloest_t)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-
-            for (int i = 0; i < num_plane; i++)
-            {
-                if (!planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    trace_data.colour = background;
-
-                }
-                else if (!planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    continue;
-                }
-                else if (planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    cloest_t = trace_data.t;
-                    cloest_colour = trace_data.colour;
-                }
-                else if (planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    if (trace_data.t < cloest_t)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-
-
-            for (int i = 0; i < num_triangle; i++)
-            {
-                if (!triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    trace_data.colour = background;
-
-                }
-                else if (!triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    continue;
-                }
-                else if (triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                {
-                    cloest_t = trace_data.t;
-                    cloest_colour = trace_data.colour;
-                }
-                else if (triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                {
-                    if (trace_data.t < cloest_t)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-
-            image[x + y * image_height] = cloest_colour;
+            image[x + y * image_height] = objCasesDealing(ray, trace_data, spheres, planes, triangles);
         }
     }
 };
@@ -332,119 +333,21 @@ void sceneGeneratorWithRegularMSAA(atlas::math::Ray<atlas::math::Vector>& ray, S
     {
         for (std::size_t x{ 0 }; x < image_width; x++)
         {
-            //ray.o = { x + 0.5f, y + 0.5f, 0 };
-            
             sampler.pixel_colour_ = background;
-            // did I hit
-
 
             for (int p = 0; p < sampler.n; p++)
             {
                 for (int q = 0; q < sampler.n; q++)
                 {
-                    float cloest_t = -1.0f;
-                    Colour cloest_colour = background;
+                    
                     sampler.pp_.x = (float)(1.0 * (x - 0.5 * image_width + (q + 0.5) / sampler.n));
                     sampler.pp_.y = (float)(1.0 * (y - 0.5 * image_height + (p + 0.5) / sampler.n));
                     ray.o = { sampler.pp_.x,sampler.pp_.y,100.0f };
 
-                    for (int i = 0; i < num_sphere; i++)
-                    {
-                        if (!spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if(spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-                    for (int i = 0; i < num_plane; i++)
-                    {
-                        if (!planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if (planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-
-                    for (int i = 0; i < num_triangle; i++)
-                    {
-                        if (!triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if (triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-
-                    sampler.pixel_colour_ += cloest_colour;
+                    sampler.pixel_colour_ += objCasesDealing(ray, trace_data, spheres, planes, triangles);
                 }
             }
-
-            
+ 
             sampler.pixel_colour_ /= sampler.num_samples_;
             image[x + y * image_height] = sampler.pixel_colour_;
         }
@@ -458,120 +361,23 @@ void sceneGeneratorWithJitteredMSAA(atlas::math::Ray<atlas::math::Vector>& ray, 
     {
         for (std::size_t x{ 0 }; x < image_width; x++)
         {
-            //ray.o = { x + 0.5f, y + 0.5f, 0 };
-
             sampler.pixel_colour_ = background;
-            // did I hit
 
 
             for (int p = 0; p < sampler.n; p++)
             {
                 for (int q = 0; q < sampler.n; q++)
                 {
-                    float cloest_t = -1.0f;
-                    Colour cloest_colour = background; 
+                    
                     float r_x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                     float r_y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                     sampler.pp_.x = (float)(1.0 * (x - 0.5 * image_width + (q + r_x) / sampler.n));
                     sampler.pp_.y = (float)(1.0 * (y - 0.5 * image_height + (p + r_y) / sampler.n));
                     ray.o = { sampler.pp_.x,sampler.pp_.y,100.0f };
 
-                    for (int i = 0; i < num_sphere; i++)
-                    {
-                        if (!spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if (spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-                    for (int i = 0; i < num_plane; i++)
-                    {
-                        if (!planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if (planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-
-                    for (int i = 0; i < num_triangle; i++)
-                    {
-                        if (!triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            trace_data.colour = background;
-
-                        }
-                        else if (!triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            continue;
-                        }
-                        else if (triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else if (triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                        {
-                            if (trace_data.t < cloest_t)
-                            {
-                                cloest_t = trace_data.t;
-                                cloest_colour = trace_data.colour;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-
-                    sampler.pixel_colour_ += cloest_colour;
+                    sampler.pixel_colour_ += objCasesDealing(ray, trace_data, spheres, planes, triangles);
                 }
             }
-
 
             sampler.pixel_colour_ /= sampler.num_samples_;
             image[x + y * image_height] = sampler.pixel_colour_;
@@ -586,120 +392,23 @@ void sceneGeneratorWithRandomMSAA(atlas::math::Ray<atlas::math::Vector>& ray, Sh
     {
         for (std::size_t x{ 0 }; x < image_width; x++)
         {
-            //ray.o = { x + 0.5f, y + 0.5f, 0 };
-
             sampler.pixel_colour_ = background;
-            // did I hit
-
 
             for (int j = 0; j < sampler.num_samples_; j++)
             {
-                float cloest_t = -1.0f;
-                Colour cloest_colour = background;
+                
                 float r_x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 float r_y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 sampler.pp_.x = (float)(1.0 * (x - 0.5 * image_width + r_x));
                 sampler.pp_.y = (float)(1.0 * (y - 0.5 * image_height + r_y));
                 ray.o = { sampler.pp_.x,sampler.pp_.y,100.0f };
 
-                for (int i = 0; i < num_sphere; i++)
-                {
-                    if (!spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        trace_data.colour = background;
-
-                    }
-                    else if (!spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        continue;
-                    }
-                    else if (spheres[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else if (spheres[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        if (trace_data.t < cloest_t)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-                }
-
-                for (int i = 0; i < num_plane; i++)
-                {
-                    if (!planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        trace_data.colour = background;
-
-                    }
-                    else if (!planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        continue;
-                    }
-                    else if (planes[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else if (planes[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        if (trace_data.t < cloest_t)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-                }
-
-
-                for (int i = 0; i < num_triangle; i++)
-                {
-                    if (!triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        trace_data.colour = background;
-
-                    }
-                    else if (!triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        continue;
-                    }
-                    else if (triangles[i].hit(ray, trace_data) && cloest_t < 0.0f)
-                    {
-                        cloest_t = trace_data.t;
-                        cloest_colour = trace_data.colour;
-                    }
-                    else if (triangles[i].hit(ray, trace_data) && cloest_t >= 0.0f)
-                    {
-                        if (trace_data.t < cloest_t)
-                        {
-                            cloest_t = trace_data.t;
-                            cloest_colour = trace_data.colour;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-                }
-
-
-                sampler.pixel_colour_ += cloest_colour;
+                sampler.pixel_colour_ += objCasesDealing(ray, trace_data, spheres, planes, triangles);
             }
-
 
             sampler.pixel_colour_ /= sampler.num_samples_;
             image[x + y * image_height] = sampler.pixel_colour_;
         }
     }
 };
+

@@ -1,5 +1,5 @@
 #include "assignment.hpp"
-
+// CSC305_2020_1 Assignment 1 Arthur Wang V00847655
 int main()
 {
     // Your code here.
