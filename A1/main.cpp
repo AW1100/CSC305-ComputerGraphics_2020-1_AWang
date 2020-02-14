@@ -1,75 +1,39 @@
 #include "assignment.hpp"
-
+// CSC305_2020_1 Assignment 1 Arthur Wang V00847655
 int main()
 {
     // Your code here.
-    const std::size_t imageWidth{ 600 };
-    const std::size_t imageHeight{ 600 };
+    atlas::math::Ray<atlas::math::Vector> ray{ {0,0,0},{0,0,-1} };
+    Sphere spheres[num_sphere];
+    spheres[0] = { {-50,0,0},60,{1,0,0} };
+    spheres[1] = { {25,0,20},70,{0,1,0} };
+    spheres[2] = { {-100,80,30},50,{0,0,1} };
+    spheres[3] = { {0,90,0},50,{1,1,0} };
+    spheres[4] = { {50,150,20},40,{1,0,1} };
+    spheres[5] = { {100,50,0},90,{0,1,1} };
+    Plane planes[num_plane];
+    planes[0] = { { 200,0,0 }, { 1,0,1 }, { 0.75,0.5,0.25 } };
+    planes[1] = { {-200,0,0},{0,1,1},{0.25,0.5,0.75} };
+    Triangle triangles[num_triangle];
+    triangles[0] = { {-150, -150, 0}, { 0,-250,0 }, { 20,-150,0 }, { 0,0.5,1 }, { 1,1,1 } };
+    triangles[1] = { {-150, 0, 40}, { 0,250,30 }, { 50,150,20 }, { 0,0.5,1 }, { 0.5,1,1 } };
 
-    Ray ray;
-    ray.d = { 0, 0, -1 };
-    Sphere s1;
-    s1.init({ 125, 0, 0 }, 90.0f);
-    Sphere s2;
-    s2.init({ 75, 10, 0 }, 80.0f);
-    Sphere s3;
-    s3.init({ 25, 20, 0 }, 70.0f);
-    Sphere s4;
-    s4.init({ -25, 30, 0 }, 60.0f);
-    Sphere s5;
-    s5.init({ -75, 40, 0 }, 50.0f);
-    Sphere s6;
-    s6.init({ -125, 50, 0 }, 40.0f);
-    //s.centre = { 0, 0, 0 };
-    //s.radius = 120.0f;
+    std::vector<Colour> image(image_width * image_height);
+    ShadeRec trace_data{};
+    Sampler sampler{ 16,background,{0.0f,0.0f} };
 
-    std::vector<Colour> image(imageWidth * imageHeight);
-    //Colour pixel;
-    /*
-    for (std::size_t y{ 0 }; y < imageHeight; ++y)
-    {
-        for (std::size_t x{ 0 }; x < imageWidth; ++x)
-        {
-            // Compute origin of ray.
-            float originX = (x - 0.5f * (imageWidth - 1.0f));
-            float originY = (y - 0.5f * (imageHeight - 1.0f));
+    /*sceneGenerator(ray, trace_data, image, spheres, planes, triangles);
+    saveToBMP("Finalscene.bmp", image_width, image_height, image);*/
 
-            ray.o = { originX, originY, 100.0f };
+    sceneGeneratorWithRegularMSAA(ray, trace_data, image, spheres, planes, triangles, sampler);
+    saveToBMP("FinalsceneWithRegularMSAA.bmp", image_width, image_height, image);
 
-            pixel = intersectRayWithSphere(s1, ray, { 0,1,0 });
+    /*sceneGeneratorWithJitteredMSAA(ray, trace_data, image, spheres, planes, triangles, sampler);
+    saveToBMP("FinalsceneWithJitteredMSAA.bmp", image_width, image_height, image);*/
 
+    /*sceneGeneratorWithRandomMSAA(ray, trace_data, image, spheres, planes, triangles, sampler);
+    saveToBMP("FinalsceneWithRandomMSAA.bmp", image_width, image_height, image);*/
 
-            image[x + y * imageHeight] = pixel;
-        }
-    }
-
-    for (std::size_t y{ 0 }; y < imageHeight; ++y)
-    {
-        for (std::size_t x{ 0 }; x < imageWidth; ++x)
-        {
-            // Compute origin of ray.
-            float originX = (x - 0.5f * (imageWidth - 1.0f));
-            float originY = (y - 0.5f * (imageHeight - 1.0f));
-
-            ray.o = { originX, originY, 100.0f };
-            if (image[x + y * imageHeight] != black)
-                continue;
-            pixel = intersectRayWithSphere(s2, ray, { 1,0,0 });
-
-
-            image[x + y * imageHeight] = pixel;
-        }
-    }
-    */
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s1, { 1,0,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s2, { 0,1,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s3, { 0,0,1 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s4, { 1,1,0 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s5, { 1,0,1 });
-    image = sceneGenerator(imageWidth, imageHeight, image, ray, s6, { 0,1,1 });
-
-    saveToBMP("sphere.bmp", imageWidth, imageHeight, image);
-    
 }
 
 /**
