@@ -738,16 +738,25 @@ public:
                         pixelAverage += trace_data.material->shade(trace_data);
                     }
                 }
-                /*float MAX_COLOUR = 0.0f;
-                if (pixelAverage.r > MAX_COLOUR)MAX_COLOUR = pixelAverage.r;
-                if (pixelAverage.g > MAX_COLOUR)MAX_COLOUR = pixelAverage.g;
-                if (pixelAverage.b > MAX_COLOUR)MAX_COLOUR = pixelAverage.b;
-                pixelAverage.r /= MAX_COLOUR;
-                pixelAverage.g /= MAX_COLOUR;
-                pixelAverage.b /= MAX_COLOUR;*/
-                world->image.push_back({ pixelAverage.r * avg,
-                                       pixelAverage.g * avg,
-                                       pixelAverage.b * avg });
+                
+                pixelAverage.r *= avg;
+                pixelAverage.g *= avg;
+                pixelAverage.b *= avg;
+                // out-of-gamut handling Max-to-one
+                if (pixelAverage.r > 1.0f || pixelAverage.g > 1.0f || pixelAverage.b > 1.0f)
+                {
+                    float MAX_COLOUR = 0.0f;
+                    if (pixelAverage.r > MAX_COLOUR)MAX_COLOUR = pixelAverage.r;
+                    if (pixelAverage.g > MAX_COLOUR)MAX_COLOUR = pixelAverage.g;
+                    if (pixelAverage.b > MAX_COLOUR)MAX_COLOUR = pixelAverage.b;
+                    pixelAverage.r /= MAX_COLOUR;
+                    pixelAverage.g /= MAX_COLOUR;
+                    pixelAverage.b /= MAX_COLOUR;
+                }
+
+                world->image.push_back({ pixelAverage.r,
+                                       pixelAverage.g,
+                                       pixelAverage.b });
             }
         }
     }

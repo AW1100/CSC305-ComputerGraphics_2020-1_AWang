@@ -1,4 +1,4 @@
-#include "lab.hpp"
+#include "assignment.hpp"
 
 int main()
 {
@@ -44,8 +44,8 @@ int main()
     world.scene[2]->setColour({ 0, 1, 0 });*/
 
     world->ambient = std::make_shared<Ambient>();
-    /*world->lights.push_back(
-        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));*/
+    world->lights.push_back(
+        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));
 
     world->lights.push_back(
         std::make_shared<PointLight>(PointLight{ {200, -200, 100} }));
@@ -54,10 +54,10 @@ int main()
     world->ambient->scaleRadiance(0.05f);
 
     world->lights[0]->setColour({ 1, 1, 1 });
-    world->lights[0]->scaleRadiance(4.0f);
+    world->lights[0]->scaleRadiance(2.0f);
 
-    /*world->lights[1]->setColour({ 1, 1, 1 });
-    world->lights[1]->scaleRadiance(4.0f);*/
+    world->lights[1]->setColour({ 1, 1, 1 });
+    world->lights[1]->scaleRadiance(6.0f);
 
     Point samplePoint{}, pixelPoint{};
 
@@ -70,7 +70,7 @@ int main()
 
     camera.renderScene(world);
 
-    saveToFile("F:/csc305_spring2020_labs/labs/lab04_shading/raytrace.bmp", world->width, world->height, world->image);
+    saveToFile("raytrace.bmp", world->width, world->height, world->image);
 
     return 0;
 }
