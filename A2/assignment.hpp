@@ -150,6 +150,8 @@ public:
         return mMaterial;
     }
 
+    virtual bool shadowHit(atlas::math::Ray<atlas::math::Vector> const& ray, float& tMin) const=0;
+
 protected:
     virtual bool intersectRay(atlas::math::Ray<atlas::math::Vector> const& ray,
         float& tMin) const = 0;
@@ -181,6 +183,7 @@ public:
 class Light
 {
 public:
+    
     virtual atlas::math::Vector getDirection(ShadeRec& sr) = 0;
 
     Colour L([[maybe_unused]] ShadeRec& sr)
@@ -198,9 +201,22 @@ public:
         mColour = c;
     }
 
+    bool getShadow() const
+    {
+        return mShadow;
+    }
+
+    void setShadow(const bool shadow)
+    {
+        mShadow = shadow;
+    }
+
+    virtual bool inShadow(atlas::math::Ray<atlas::math::Vector>& ray, ShadeRec& sr) const=0;
+
 protected:
     Colour mColour;
     float mRadiance;
+    bool mShadow = true;
 };
 
 // Concrete classes which we can construct and use in our ray tracer
@@ -226,12 +242,20 @@ public:
         return glm::normalize(_location - sr.hitPoint);
     }
 
-    /*Colour L([[maybe_unused]] ShadeRec& sr)
+    bool inShadow(atlas::math::Ray<atlas::math::Vector>& ray, ShadeRec& sr) const
     {
-        float cos = glm::dot(sr.normal, (sr.hitPoint-sr.ray.o)) / (sqrt(glm::dot(sr.normal, sr.normal)) * sqrt(glm::dot((sr.hitPoint - sr.ray.o), (sr.hitPoint - sr.ray.o))));
-        std::cout << cos << std::endl;
-        return mRadiance * mColour * cos;
-    }*/
+        float t;
+        int num_obj = (int)sr.world->scene.size();
+        float d = sqrt((_location.x - ray.o.x) * (_location.x - ray.o.x) + (_location.y - ray.o.y) * (_location.y - ray.o.y) + (_location.z - ray.o.z) * (_location.z - ray.o.z));
+
+        for (int i = 0; i < num_obj; i++)
+        {
+            if (sr.world->scene[i]->shadowHit(ray, t) && t < d)
+                return true;
+        }
+        return false;
+
+    }
 
 private:
     atlas::math::Point _location;
@@ -262,6 +286,36 @@ public:
         }
 
         return intersect;
+    }
+    bool shadowHit(atlas::math::Ray<atlas::math::Vector> const& ray, float& tMin) const
+    {
+        float t;
+        const auto tmp{ ray.o - mCentre };
+        const auto a{ glm::dot(ray.d, ray.d) };
+        const auto b{ 2.0f * glm::dot(ray.d, tmp) };
+        const auto c{ glm::dot(tmp, tmp) - mRadiusSqr };
+        const auto disc{ (b * b) - (4.0f * a * c) };
+        const float kEpsilon{ 0.01f };
+        if (disc < kEpsilon)
+            return false;
+        else {
+            auto e = sqrt(disc);
+            auto denom = 2.0 * a;
+            t = (float)((-b - e) / denom);    // smaller root
+
+            if (t > kEpsilon) {
+                tMin = t;
+                return true;
+            }
+
+            t = (float)((-b + e) / denom);    // larger root
+
+            if (t > kEpsilon) {
+                tMin = t;
+                return true;
+            }
+        }
+        return false;
     }
 
 private:
@@ -336,6 +390,43 @@ public:
         return intersect;
     }
 
+    bool shadowHit(atlas::math::Ray<atlas::math::Vector> const& ray, float& tMin) const
+    {
+        double a = v0_.x - v1_.x, b = v0_.x - v2_.x, c = ray.d.x, d = v0_.x - ray.o.x;
+        double e = v0_.y - v1_.y, f = v0_.y - v2_.y, g = ray.d.y, h = v0_.y - ray.o.y;
+        double i = v0_.z - v1_.z, j = v0_.z - v2_.z, k = ray.d.z, l = v0_.z - ray.o.z;
+
+        double m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+        double q = g * i - e * k, s = e * j - f * i;
+
+        double inv_denom = 1.0 / (a * m + b * q + c * s);
+
+        double e1 = d * m - b * n - c * p;
+        double beta = e1 * inv_denom;
+        const float kEpsilon{ 0.01f };
+        if (beta < kEpsilon)
+            return (false);
+
+        double r = e * l - h * i;
+        double e2 = a * n + d * q + c * r;
+        double gamma = e2 * inv_denom;
+
+        if (gamma < kEpsilon)
+            return (false);
+
+        if (beta + gamma > 1.0)
+            return (false);
+
+        double e3 = a * p - b * r + d * s;
+        double t = e3 * inv_denom;
+
+        if (t < kEpsilon)
+            return (false);
+
+        tMin = (float)t;
+        return (true);
+    }
+
 private:
     bool intersectRay(atlas::math::Ray<atlas::math::Vector> const& ray,
         float& tMin) const
@@ -352,17 +443,17 @@ private:
         double e1 = d * m - b * n - c * p;
         double beta = e1 * inv_denom;
 
-        if (beta < 0.0)
+        if (beta < 0.0f)
             return (false);
 
         double r = e * l - h * i;
         double e2 = a * n + d * q + c * r;
         double gamma = e2 * inv_denom;
 
-        if (gamma < 0.0)
+        if (gamma < 0.0f)
             return (false);
 
-        if (beta + gamma > 1.0)
+        if (beta + gamma > 1.0f)
             return (false);
 
         double e3 = a * p - b * r + d * s;
@@ -405,6 +496,20 @@ public:
 
         return intersect;
     }
+
+    bool shadowHit(atlas::math::Ray<atlas::math::Vector> const& ray, float& tMin) const
+    {
+        float t = glm::dot(point_ - ray.o, normal_) / glm::dot(ray.d, normal_);
+        const float kEpsilon{ 0.01f };
+        if (t > kEpsilon)
+        {
+            tMin = t;
+            return true;
+        }
+        else
+            return false;
+    }
+
 
 private:
     bool intersectRay(atlas::math::Ray<atlas::math::Vector> const& ray,
@@ -562,8 +667,21 @@ public:
 
             if (nDotWi > 0.0f)
             {
-                L += mDiffuseBRDF->fn(sr, wo, wi) * sr.world->lights[i]->L(sr) *
-                    nDotWi;
+                bool inShadow = false;
+                if (sr.world->lights[i]->getShadow())
+                {
+                    atlas::math::Ray<atlas::math::Vector> shadowRay(sr.hitPoint, wi);
+                    inShadow = sr.world->lights[i]->inShadow(shadowRay, sr);
+                }
+
+
+                
+                if (!inShadow) 
+                {
+                    L += mDiffuseBRDF->fn(sr, wo, wi) * sr.world->lights[i]->L(sr) *
+                        nDotWi;
+                }
+                
             }
         }
 
@@ -596,6 +714,11 @@ public:
         return mDirection;
     }
 
+    bool inShadow([[maybe_unused]] atlas::math::Ray<atlas::math::Vector>& ray, [[maybe_unused]] ShadeRec& sr) const
+    {
+        return false;
+    }
+
 private:
     atlas::math::Vector mDirection;
 };
@@ -609,6 +732,11 @@ public:
     atlas::math::Vector getDirection([[maybe_unused]] ShadeRec& sr)
     {
         return atlas::math::Vector{ 0.0f };
+    }
+
+    bool inShadow([[maybe_unused]] atlas::math::Ray<atlas::math::Vector>& ray, [[maybe_unused]] ShadeRec& sr) const
+    {
+        return false;
     }
 
 private:

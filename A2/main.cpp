@@ -53,6 +53,9 @@ int main()
     world->ambient->setColour({ 1, 1, 1 });
     world->ambient->scaleRadiance(0.05f);
 
+    /*world->lights[0]->setColour({ 1, 1, 1 });
+    world->lights[0]->scaleRadiance(6.0f);*/
+
     world->lights[0]->setColour({ 1, 1, 1 });
     world->lights[0]->scaleRadiance(2.0f);
 
