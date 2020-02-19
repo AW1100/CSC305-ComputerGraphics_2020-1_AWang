@@ -619,6 +619,61 @@ private:
     float mDiffuseReflection;
 };
 
+class GlossySpecular : public BRDF
+{
+public:
+    GlossySpecular() :kd{}, E{}, cd{}
+    {}
+    GlossySpecular(float kd_, float exp_, Colour cd_):
+        kd{ kd_ }, E{ exp_ }, cd{ cd_ }
+    {}
+
+    void set_ks(float ks_)
+    {
+        kd = ks_;
+    }
+
+    void set_exp(float exp_)
+    {
+        E = exp_;
+    }
+
+    void set_cd(Colour const& colour)
+    {
+        cd = colour;
+    }
+
+    Colour
+        fn([[maybe_unused]] ShadeRec const& sr,
+            [[maybe_unused]] atlas::math::Vector const& wo,
+            [[maybe_unused]] atlas::math::Vector const& wi) const
+    {
+        Colour L=sr.color;
+        float ndotwi = glm::dot(sr.normal, wi);
+        //atlas::math::Vector r(-wi + 2.0 * ndotwi * sr.normal);
+        atlas::math::Vector r{ -wi.x + 2.0f * ndotwi * sr.normal.x,-wi.y + 2.0f * ndotwi * sr.normal.y,-wi.z + 2.0f * ndotwi * sr.normal.z };
+        float rdotwo = glm::dot(r, wo);
+        if (rdotwo > 0.0f) {
+            L = cd * kd * pow(rdotwo, E);
+        }
+
+        return L;
+    }
+
+    Colour
+        rho([[maybe_unused]] ShadeRec const& sr,
+            [[maybe_unused]] atlas::math::Vector const& reflected) const
+    {
+        return Colour{ 0,0,0 };
+    }
+
+private:
+    float kd;
+    float E;
+    Colour cd;
+
+};
+
 class Matte : public Material
 {
 public:
@@ -691,6 +746,95 @@ public:
 private:
     std::shared_ptr<Lambertian> mDiffuseBRDF;
     std::shared_ptr<Lambertian> mAmbientBRDF;
+};
+
+class Phong : public Material
+{
+public:
+    Phong() :
+        Material{},
+        ambient_brdf{ std::make_shared<Lambertian>() },
+        diffuse_brff{ std::make_shared<Lambertian>() },
+        specular_brdf{ std::make_shared<GlossySpecular>() }
+    {}
+    Phong(float kd_, float ka_, float ks_, float exp_, Colour color) : Phong{}
+    {
+        setAmbientReflection(ka_); //ka
+        setDiffuseReflection(kd_); //kd
+        setKsReflection(ks_);
+        setExpReflection(exp_);
+        setDiffuseColour(color);
+    }
+
+    void setDiffuseReflection(float k)
+    {
+        diffuse_brff->setDiffuseReflection(k);
+    }
+
+    void setAmbientReflection(float k)
+    {
+        ambient_brdf->setDiffuseReflection(k);
+    }
+
+    void setKsReflection(float k)
+    {
+        specular_brdf->set_ks(k);
+    }
+
+    void setExpReflection(float k)
+    {
+        specular_brdf->set_exp(k);
+    }
+
+    void setDiffuseColour(Colour colour)
+    {
+        diffuse_brff->setDiffuseColour(colour);
+        ambient_brdf->setDiffuseColour(colour);
+        specular_brdf->set_cd(colour);
+    }
+
+    Colour shade(ShadeRec& sr)
+    {
+        using atlas::math::Ray;
+        using atlas::math::Vector;
+
+        Vector wo = -sr.ray.o;
+        Colour L = ambient_brdf->rho(sr, wo) * sr.world->ambient->L(sr);
+        size_t numLights = sr.world->lights.size();
+
+        for (size_t i{ 0 }; i < numLights; ++i)
+        {
+            Vector wi = sr.world->lights[i]->getDirection(sr);
+            float nDotWi = glm::dot(sr.normal, wi);
+
+            if (nDotWi > 0.0f)
+            {
+                bool inShadow = false;
+                if (sr.world->lights[i]->getShadow())
+                {
+                    atlas::math::Ray<atlas::math::Vector> shadowRay(sr.hitPoint, wi);
+                    inShadow = sr.world->lights[i]->inShadow(shadowRay, sr);
+                }
+
+
+
+                if (!inShadow)
+                {
+                    L += (diffuse_brff->fn(sr, wo, wi) + specular_brdf->fn(sr, wo, wi)) * sr.world->lights[i]->L(sr) *
+                        nDotWi;
+                }
+
+            }
+        }
+
+        return L;
+    }
+
+private:
+    std::shared_ptr<Lambertian> ambient_brdf;
+    std::shared_ptr<Lambertian> diffuse_brff;
+    std::shared_ptr<GlossySpecular> specular_brdf;
+
 };
 
 class Directional : public Light
@@ -892,4 +1036,103 @@ public:
 private:
     float mDistance;
     float mZoom;
+};
+
+class Fisheye : public Camera
+{
+public:
+    Fisheye() : Camera(),psi_max{60.0f}
+    {}
+
+    atlas::math::Vector rayDirection(atlas::math::Point const& p, float& r_squared) const
+    {
+        atlas::math::Point pn{};
+        pn.x = 2.0f / 600 * p.x;
+        pn.y = 2.0f / 600 * p.y;
+        r_squared = pn.x * pn.x + pn.y * pn.y;
+
+        if (r_squared <= 1.0) {
+            float r = sqrt(r_squared);
+            float psi = (float)(r * psi_max * 0.017453);
+            float sin_psi = sin(psi);
+            float cos_psi = cos(psi);
+            float sin_alpha = pn.y / r;
+            float cos_alpha = pn.x / r;
+            const auto dir = sin_psi * cos_alpha * mU + sin_psi * sin_alpha * mV - cos_psi * mW;
+
+            return dir;
+        }
+        else
+            return atlas::math::Vector{0,0,0};
+    }
+
+    void renderScene(std::shared_ptr<World>& world) const
+    {
+        using atlas::math::Point;
+        using atlas::math::Ray;
+        using atlas::math::Vector;
+
+        Point samplePoint{}, pixelPoint{};
+        Ray<atlas::math::Vector> ray{};
+        float r_squared;
+
+        ray.o = mEye;
+        float avg{ 1.0f / world->sampler->getNumSamples() };
+
+        for (int r{ 0 }; r < world->height; ++r)
+        {
+            for (int c{ 0 }; c < world->width; ++c)
+            {
+                Colour pixelAverage{ 0, 0, 0 };
+
+                for (int j = 0; j < world->sampler->getNumSamples(); ++j)
+                {
+                    ShadeRec trace_data{};
+                    trace_data.world = world;
+                    trace_data.t = std::numeric_limits<float>::max();
+                    samplePoint = world->sampler->sampleUnitSquare();
+                    pixelPoint.x = c - 0.5f * world->width + samplePoint.x;
+                    pixelPoint.y = r - 0.5f * world->height + samplePoint.y;
+                    ray.d = rayDirection(pixelPoint, r_squared);
+
+                    if (r_squared <= 1.0f)
+                    {
+                        bool hit{};
+                        for (auto obj : world->scene)
+                        {
+                            hit |= obj->hit(ray, trace_data);
+                        }
+
+                        if (hit)
+                        {
+                            trace_data.hitPoint = ray.o + trace_data.t * ray.d;
+                            pixelAverage += trace_data.material->shade(trace_data);
+                        }
+                    }
+                }
+
+                pixelAverage.r *= avg;
+                pixelAverage.g *= avg;
+                pixelAverage.b *= avg;
+                // out-of-gamut handling Max-to-one
+                if (pixelAverage.r > 1.0f || pixelAverage.g > 1.0f || pixelAverage.b > 1.0f)
+                {
+                    float MAX_COLOUR = 0.0f;
+                    if (pixelAverage.r > MAX_COLOUR)MAX_COLOUR = pixelAverage.r;
+                    if (pixelAverage.g > MAX_COLOUR)MAX_COLOUR = pixelAverage.g;
+                    if (pixelAverage.b > MAX_COLOUR)MAX_COLOUR = pixelAverage.b;
+                    pixelAverage.r /= MAX_COLOUR;
+                    pixelAverage.g /= MAX_COLOUR;
+                    pixelAverage.b /= MAX_COLOUR;
+                }
+
+                world->image.push_back({ pixelAverage.r,
+                                       pixelAverage.g,
+                                       pixelAverage.b });
+            }
+        }
+    }
+private:
+    float psi_max;
+
 };

@@ -37,6 +37,17 @@ int main()
         std::make_shared<Matte>(0.50f, 0.05f, Colour{ 0.75, 0.75, 0.75 }));
     world->scene[3]->setColour({ 0.75, 0.75, 0.75 });
 
+    world->scene.push_back(
+        std::make_shared<Triangle>(atlas::math::Point{ 350,100,200 }, atlas::math::Point{ 550,100,200 }, atlas::math::Point{ 400, 100, -200 }, atlas::math::Normal{ 0,-1,0 }));
+    world->scene[4]->setMaterial(
+        std::make_shared<Matte>(0.50f, 0.05f, Colour{ 1, 0, 1 }));
+    world->scene[4]->setColour({ 1, 0, 1 });
+
+    world->scene.push_back(
+        std::make_shared<Sphere>(atlas::math::Point{ -350, 100, 200 }, 100.0f));
+    world->scene[5]->setMaterial(
+        std::make_shared<Phong>(0.60f, 0.25f, 0.20f, 100.0f, Colour{ 1, 1, 0 }));
+    world->scene[5]->setColour({ 1, 1, 0 });
     /*world.scene.push_back(
         std::make_shared<Sphere>(atlas::math::Point{ -128, 32, -700 }, 64.0f));
     world.scene[2]->setMaterial(
@@ -44,31 +55,32 @@ int main()
     world.scene[2]->setColour({ 0, 1, 0 });*/
 
     world->ambient = std::make_shared<Ambient>();
-    world->lights.push_back(
-        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));
+    /*world->lights.push_back(
+        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));*/
 
     world->lights.push_back(
-        std::make_shared<PointLight>(PointLight{ {200, -200, 100} }));
+        std::make_shared<PointLight>(PointLight{ {500, -500, 200} }));
 
     world->ambient->setColour({ 1, 1, 1 });
     world->ambient->scaleRadiance(0.05f);
 
-    /*world->lights[0]->setColour({ 1, 1, 1 });
-    world->lights[0]->scaleRadiance(6.0f);*/
-
     world->lights[0]->setColour({ 1, 1, 1 });
+    world->lights[0]->scaleRadiance(3.0f);
+
+    /*world->lights[0]->setColour({ 1, 1, 1 });
     world->lights[0]->scaleRadiance(2.0f);
 
     world->lights[1]->setColour({ 1, 1, 1 });
-    world->lights[1]->scaleRadiance(6.0f);
+    world->lights[1]->scaleRadiance(6.0f);*/
 
     Point samplePoint{}, pixelPoint{};
 
     Pinhole camera{};
-
-    // change camera position here
     camera.setEye({ 0.0f, -200.0f, 1000.0f });
 
+    /*Fisheye camera{};
+    camera.setEye({ 0.0f, -300.0f, 300.0f });
+    */
     camera.computeUVW();
 
     camera.renderScene(world);
