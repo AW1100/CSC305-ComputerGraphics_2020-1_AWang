@@ -62,6 +62,8 @@ public:
         mNumSamples{ numSamples }, mNumSets{ numSets }, mCount{ 0 }, mJump{ 0 }
     {
         mSamples.reserve(mNumSets* mNumSamples);
+        //disk_samples.reserve(100);
+        //disk_samples.reserve(mNumSets* mNumSamples);
         setupShuffledIndeces();
     }
     virtual ~Sampler() = default;
@@ -108,8 +110,63 @@ public:
         return mSamples[mJump + mShuffledIndeces[mJump + mCount++ % mNumSamples]];
     }
 
+    void map_samples_to_unit_disk()
+    {
+        //size_t size = mSamples.size();
+        float r, phi;
+        atlas::math::Point sp{};
+        //disk_samples.reserve(4);
+        for (size_t j = 0; j < 4; j++) {
+            sp.x = (float)(2.0 * mSamples[j].x - 1.0);
+            sp.y = (float)(2.0 * mSamples[j].y - 1.0);
+
+            if (sp.x > -sp.y) {
+                if (sp.x > sp.y) {
+                    r = sp.x;
+                    phi = sp.y / sp.x;
+                }
+                else {
+                    r = sp.y;
+                    phi = 2.0f - sp.x / sp.y;
+                }
+            }
+            else {
+                if (sp.x < sp.y) {
+                    r = -sp.x;
+                    phi = 4.0f + sp.y / sp.x;
+                }
+                else {
+                    r = -sp.y;
+                    if (sp.y != 0.0f) {
+                        phi = 6.0f - sp.x / sp.y;
+                    }
+                    else {
+                        phi = 0.0f;
+                    }
+                }
+            }
+            phi *= 3.14159f / 4.0f;
+
+            disk_samples[j].x = r * cos(phi);
+            disk_samples[j].y = r * sin(phi);
+        }
+        mSamples.erase(mSamples.begin(), mSamples.end());
+    }
+
+    atlas::math::Point sampleUnitDisk()
+    {
+        if (mCount % mNumSamples == 0)
+        {
+            atlas::math::Random<int> engine;
+            mJump = (engine.getRandomMax() % mNumSets) * mNumSamples;
+        }
+
+        return disk_samples[mJump + mCount++ % mNumSamples];
+    }
+
 protected:
     std::vector<atlas::math::Point> mSamples;
+    atlas::math::Point disk_samples[4];
     std::vector<int> mShuffledIndeces;
 
     int mNumSamples;
@@ -622,15 +679,15 @@ private:
 class GlossySpecular : public BRDF
 {
 public:
-    GlossySpecular() :kd{}, E{}, cd{}
+    GlossySpecular() :ks{}, E{}, cs{}
     {}
-    GlossySpecular(float kd_, float exp_, Colour cd_):
-        kd{ kd_ }, E{ exp_ }, cd{ cd_ }
+    GlossySpecular(float ks_, float exp_, Colour colour):
+        ks{ ks_ }, E{ exp_ }, cs{ colour }
     {}
 
     void set_ks(float ks_)
     {
-        kd = ks_;
+        ks = ks_;
     }
 
     void set_exp(float exp_)
@@ -638,9 +695,9 @@ public:
         E = exp_;
     }
 
-    void set_cd(Colour const& colour)
+    void set_cs(Colour const& colour)
     {
-        cd = colour;
+        cs = colour;
     }
 
     Colour
@@ -648,13 +705,13 @@ public:
             [[maybe_unused]] atlas::math::Vector const& wo,
             [[maybe_unused]] atlas::math::Vector const& wi) const
     {
-        Colour L=sr.color;
+        Colour L{};
         float ndotwi = glm::dot(sr.normal, wi);
-        //atlas::math::Vector r(-wi + 2.0 * ndotwi * sr.normal);
-        atlas::math::Vector r{ -wi.x + 2.0f * ndotwi * sr.normal.x,-wi.y + 2.0f * ndotwi * sr.normal.y,-wi.z + 2.0f * ndotwi * sr.normal.z };
+        atlas::math::Vector r(-wi + 2.0f * ndotwi * sr.normal);
+        
         float rdotwo = glm::dot(r, wo);
         if (rdotwo > 0.0f) {
-            L = cd * kd * pow(rdotwo, E);
+            L = cs * ks * pow(rdotwo, E);
         }
 
         return L;
@@ -668,9 +725,9 @@ public:
     }
 
 private:
-    float kd;
+    float ks;
     float E;
-    Colour cd;
+    Colour cs;
 
 };
 
@@ -743,6 +800,8 @@ public:
         return L;
     }
 
+    
+
 private:
     std::shared_ptr<Lambertian> mDiffuseBRDF;
     std::shared_ptr<Lambertian> mAmbientBRDF;
@@ -757,7 +816,7 @@ public:
         diffuse_brff{ std::make_shared<Lambertian>() },
         specular_brdf{ std::make_shared<GlossySpecular>() }
     {}
-    Phong(float kd_, float ka_, float ks_, float exp_, Colour color) : Phong{}
+    Phong(float ka_,float kd_,  float ks_, float exp_, Colour color) : Phong{}
     {
         setAmbientReflection(ka_); //ka
         setDiffuseReflection(kd_); //kd
@@ -766,31 +825,32 @@ public:
         setDiffuseColour(color);
     }
 
-    void setDiffuseReflection(float k)
-    {
-        diffuse_brff->setDiffuseReflection(k);
-    }
-
-    void setAmbientReflection(float k)
+    void setAmbientReflection(const float k)
     {
         ambient_brdf->setDiffuseReflection(k);
     }
 
-    void setKsReflection(float k)
+    void setDiffuseReflection(const float k)
+    {
+        diffuse_brff->setDiffuseReflection(k);
+    }
+
+    void setKsReflection(const float k)
     {
         specular_brdf->set_ks(k);
     }
 
-    void setExpReflection(float k)
+    void setExpReflection(const float k)
     {
         specular_brdf->set_exp(k);
     }
 
-    void setDiffuseColour(Colour colour)
+    void setDiffuseColour(Colour const& colour)
     {
-        diffuse_brff->setDiffuseColour(colour);
         ambient_brdf->setDiffuseColour(colour);
-        specular_brdf->set_cd(colour);
+        diffuse_brff->setDiffuseColour(colour);
+        
+        specular_brdf->set_cs(colour);
     }
 
     Colour shade(ShadeRec& sr)
@@ -820,8 +880,7 @@ public:
 
                 if (!inShadow)
                 {
-                    L += (diffuse_brff->fn(sr, wo, wi) + specular_brdf->fn(sr, wo, wi)) * sr.world->lights[i]->L(sr) *
-                        nDotWi;
+                    L += (diffuse_brff->fn(sr, wo, wi) + specular_brdf->fn(sr, wo, wi)) * sr.world->lights[i]->L(sr) * nDotWi;
                 }
 
             }
@@ -1135,4 +1194,99 @@ public:
 private:
     float psi_max;
 
+};
+
+class ThinLens : public Camera
+{
+public:
+    ThinLens() : Camera{},lens_radius{ 0.25f }, d{ 30.0f }, f{ 25.0f }, zoom{ 1.0f }, sampler_ptr{std::make_shared<Regular>(4, 1) }
+    {sampler_ptr->map_samples_to_unit_disk(); }
+
+
+    atlas::math::Vector rayDirection(atlas::math::Point const& pixel_point, atlas::math::Point const& lens_point) const
+    {
+        atlas::math::Point p{};
+        p.x = pixel_point.x * f / d;
+        p.y = pixel_point.y * f / d;
+
+        atlas::math::Vector dir = (p.x - lens_point.x) * mU + (p.y - lens_point.y) * mV - f * mW;
+        return glm::normalize(dir);
+    }
+
+    void renderScene(std::shared_ptr<World>& world) const
+    {
+        using atlas::math::Point;
+        using atlas::math::Ray;
+        using atlas::math::Vector;
+
+        Point sp{};
+        Point pp{};
+        Point dp{};
+        Point lp{};
+        Ray<atlas::math::Vector> ray{};
+
+        //ray.o = mEye;
+        float avg{ 1.0f / world->sampler->getNumSamples() };
+
+        for (int r{ 0 }; r < world->height; ++r)
+        {
+            for (int c{ 0 }; c < world->width; ++c)
+            {
+                Colour pixelAverage{ 0, 0, 0 };
+
+                for (int j = 0; j < world->sampler->getNumSamples(); ++j)
+                {
+                    ShadeRec trace_data{};
+                    trace_data.world = world;
+                    trace_data.t = std::numeric_limits<float>::max();
+                    sp = world->sampler->sampleUnitSquare();
+                    pp.x = c - 0.5f * world->width + sp.x;
+                    pp.y = r - 0.5f * world->height + sp.y;
+
+                    dp = sampler_ptr->sampleUnitDisk();
+                    lp = dp * lens_radius;
+
+                    ray.o = mEye + lp.x * mU + lp.y * mV;
+                    ray.d = rayDirection(pp, lp);
+
+                    bool hit{};
+                    for (auto obj : world->scene)
+                    {
+                        hit |= obj->hit(ray, trace_data);
+                    }
+
+                    if (hit)
+                    {
+                        trace_data.hitPoint = ray.o + trace_data.t * ray.d;
+                        pixelAverage += trace_data.material->shade(trace_data);
+                    }
+                }
+
+                pixelAverage.r *= avg;
+                pixelAverage.g *= avg;
+                pixelAverage.b *= avg;
+                // out-of-gamut handling Max-to-one
+                if (pixelAverage.r > 1.0f || pixelAverage.g > 1.0f || pixelAverage.b > 1.0f)
+                {
+                    float MAX_COLOUR = 0.0f;
+                    if (pixelAverage.r > MAX_COLOUR)MAX_COLOUR = pixelAverage.r;
+                    if (pixelAverage.g > MAX_COLOUR)MAX_COLOUR = pixelAverage.g;
+                    if (pixelAverage.b > MAX_COLOUR)MAX_COLOUR = pixelAverage.b;
+                    pixelAverage.r /= MAX_COLOUR;
+                    pixelAverage.g /= MAX_COLOUR;
+                    pixelAverage.b /= MAX_COLOUR;
+                }
+
+                world->image.push_back({ pixelAverage.r,
+                                       pixelAverage.g,
+                                       pixelAverage.b });
+            }
+        }
+    }
+private:
+    float lens_radius;
+    float d;
+    float f;
+    float zoom;
+    std::shared_ptr<Sampler> sampler_ptr;
 };

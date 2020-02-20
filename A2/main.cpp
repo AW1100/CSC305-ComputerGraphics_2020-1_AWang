@@ -43,11 +43,11 @@ int main()
         std::make_shared<Matte>(0.50f, 0.05f, Colour{ 1, 0, 1 }));
     world->scene[4]->setColour({ 1, 0, 1 });
 
-    world->scene.push_back(
-        std::make_shared<Sphere>(atlas::math::Point{ -350, 100, 200 }, 100.0f));
+    /*world->scene.push_back(
+        std::make_shared<Sphere>(atlas::math::Point{ 350, 100, -350 }, 100.0f));
     world->scene[5]->setMaterial(
-        std::make_shared<Phong>(0.60f, 0.25f, 0.20f, 100.0f, Colour{ 1, 1, 0 }));
-    world->scene[5]->setColour({ 1, 1, 0 });
+        std::make_shared<Phong>(0.25f, 0.60f, 0.20f, 20.0f, Colour{ 0.75, 0.75, 0.5 }));
+    world->scene[5]->setColour({ 0.75, 0.75, 0.5 });*/
     /*world.scene.push_back(
         std::make_shared<Sphere>(atlas::math::Point{ -128, 32, -700 }, 64.0f));
     world.scene[2]->setMaterial(
@@ -55,8 +55,8 @@ int main()
     world.scene[2]->setColour({ 0, 1, 0 });*/
 
     world->ambient = std::make_shared<Ambient>();
-    /*world->lights.push_back(
-        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));*/
+    world->lights.push_back(
+        std::make_shared<Directional>(Directional{ {0, 0, 1024} }));
 
     world->lights.push_back(
         std::make_shared<PointLight>(PointLight{ {500, -500, 200} }));
@@ -64,28 +64,33 @@ int main()
     world->ambient->setColour({ 1, 1, 1 });
     world->ambient->scaleRadiance(0.05f);
 
-    world->lights[0]->setColour({ 1, 1, 1 });
-    world->lights[0]->scaleRadiance(3.0f);
-
     /*world->lights[0]->setColour({ 1, 1, 1 });
+    world->lights[0]->scaleRadiance(6.0f);*/
+
+    world->lights[0]->setColour({ 1, 1, 1 });
     world->lights[0]->scaleRadiance(2.0f);
 
     world->lights[1]->setColour({ 1, 1, 1 });
-    world->lights[1]->scaleRadiance(6.0f);*/
+    world->lights[1]->scaleRadiance(6.0f);
 
     Point samplePoint{}, pixelPoint{};
 
     Pinhole camera{};
     camera.setEye({ 0.0f, -200.0f, 1000.0f });
 
-    /*Fisheye camera{};
-    camera.setEye({ 0.0f, -300.0f, 300.0f });
-    */
+    //ThinLens camera{};
+    //camera.setEye({ 0.0f, -100.0f, 100.0f });
+
+    //Fisheye camera{};
+    //camera.setEye({ 0.0f, -300.0f, 300.0f });
+    
     camera.computeUVW();
 
     camera.renderScene(world);
 
-    saveToFile("raytrace.bmp", world->width, world->height, world->image);
+    saveToFile("raytrace_Pinhole.bmp", world->width, world->height, world->image);
+    //saveToFile("raytrace_ThinLens.bmp", world->width, world->height, world->image);
+    //saveToFile("raytrace_Fisheye.bmp", world->width, world->height, world->image);
 
     return 0;
 }
