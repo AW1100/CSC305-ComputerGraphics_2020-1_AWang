@@ -12,6 +12,7 @@
 #include <atlas/glx/GLSL.hpp>
 #include <atlas/utils/Cameras.hpp>
 #include <atlas/utils/LoadObjFile.hpp>
+#include <atlas/gui/GUI.hpp>
 
 #include <fmt/printf.h>
 #include <magic_enum.hpp>

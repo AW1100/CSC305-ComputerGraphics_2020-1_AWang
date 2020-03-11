@@ -181,6 +181,16 @@ void Program::run(Triangle& tri)
 {
     glEnable(GL_DEPTH_TEST);
 
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+
+	atlas::gui::GuiWindowData windowData;
+	atlas::gui::GuiRenderData renderData;
+
+	gui::initializeGuiWindowData(windowData);
+	gui::initializeGuiRenderData(renderData);
+	gui::setGuiWindow(windowData, mWindow);
+
     while (!glfwWindowShouldClose(mWindow))
     {
         int width;
@@ -195,6 +205,20 @@ void Program::run(Triangle& tri)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         tri.render(paused, width, height);
+
+		gui::newFrame(windowData);
+
+		ImGui::Begin("Filter controls");
+
+		if (ImGui::Button("Pause"))
+		{
+			paused = !paused;
+		}
+
+		ImGui::ShowDemoWindow();
+		ImGui::End();
+		ImGui::Render();
+		gui::endFrame(windowData, renderData);
 
         glfwSwapBuffers(mWindow);
         glfwPollEvents();
