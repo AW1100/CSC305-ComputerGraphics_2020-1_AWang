@@ -1,4 +1,4 @@
-# CSC305_2020-1_AW
+# CSC305_2020-1_ComputerGraphics
 
 ## A3 OpenGL real-time rendering
 ![](A3/a3_output.gif)
